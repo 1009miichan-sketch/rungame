@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>✦ DREAM RUSH ✦</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@400;700;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{
+  background:radial-gradient(ellipse at 50% 30%,#ffe0f0 0%,#d4b8f0 40%,#b8d4f8 100%);
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;overflow:hidden;
+  font-family:'Zen Maru Gothic','Courier New',monospace;
+}
+#gw{
+  width:420px;height:620px;
+  position:relative;overflow:hidden;
+  border-radius:24px;
+  border:3px solid #ffb8d8;
+  box-shadow:0 0 0 2px #fff8,0 8px 40px #e8a0c044,0 0 80px #d4b8f044;
+  image-rendering:pixelated;
+}
+#gameCanvas{display:block;image-rendering:pixelated;}
+
+/* ── UI ── */
+#ui{
+  position:absolute;top:0;left:0;right:0;
+  padding:10px 14px 0;pointer-events:none;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  background:linear-gradient(to bottom,rgba(255,220,240,0.55) 0%,transparent 100%);
+}
+.ui-box{
+  background:rgba(255,255,255,0.55);
+  border:2px solid #ffb8d8;border-radius:14px;
+  padding:4px 12px;backdrop-filter:blur(4px);
+}
+.ui-label{font-size:9px;color:#d080a0;letter-spacing:2px;text-align:center;}
+.ui-val{font-size:15px;color:#9040c0;font-weight:900;letter-spacing:2px;text-align:center;}
+#bestMark{font-size:9px;color:#ff90c0;display:none;text-align:center;}
+
+/* スキルゲージ */
+#skillBar{
+  position:absolute;bottom:68px;left:50%;transform:translateX(-50%);
+  width:200px;pointer-events:none;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+#skillLabel{font-size:9px;color:#c060a0;letter-spacing:2px;}
+#skillTrack{
+  width:100%;height:12px;
+  background:rgba(255,255,255,0.4);
+  border:2px solid #ffb8d8;border-radius:8px;overflow:hidden;
+}
+#skillFill{
+  height:100%;width:0%;
+  background:linear-gradient(90deg,#ff90c8,#c080ff,#80c8ff);
+  border-radius:6px;transition:width 0.1s;
+}
+
+/* ボタンエリア */
+#btnArea{
+  position:absolute;bottom:10px;left:0;right:0;
+  display:flex;justify-content:center;gap:12px;
+}
+.ctrl-btn{
+  background:rgba(255,255,255,0.65);
+  border:2px solid #ffb8d8;border-radius:20px;
+  color:#d060a0;font-family:'Zen Maru Gothic',sans-serif;
+  font-size:18px;font-weight:900;
+  width:64px;height:46px;cursor:pointer;
+  box-shadow:0 4px 0 #ffb8d8,0 0 12px #ffb8d844;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  transition:all 0.08s;display:flex;align-items:center;justify-content:center;
+}
+.ctrl-btn:active{transform:translateY(3px);box-shadow:0 1px 0 #ffb8d8;}
+#skillBtn{
+  background:linear-gradient(135deg,#ffd0f0,#e0c0ff);
+  border:2px solid #c080e0;border-radius:20px;
+  color:#9040c0;font-family:'Zen Maru Gothic',sans-serif;
+  font-size:11px;font-weight:900;
+  width:80px;height:46px;cursor:pointer;
+  box-shadow:0 4px 0 #c080e0,0 0 16px #d4a0ff44;
+  user-select:none;-webkit-user-select:none;touch-action:manipulation;
+  transition:all 0.08s;display:flex;align-items:center;justify-content:center;
+  letter-spacing:1px;
+}
+#skillBtn.ready{
+  background:linear-gradient(135deg,#ff90c8,#c080ff,#80d8ff);
+  border-color:#ff60b0;color:#fff;
+  box-shadow:0 4px 0 #c060a0,0 0 20px #ff90c888;
+  animation:skillPulse 0.8s ease-in-out infinite alternate;
+}
+#skillBtn:active{transform:translateY(3px);box-shadow:0 1px 0 #c080e0;}
+@keyframes skillPulse{
+  from{box-shadow:0 4px 0 #c060a0,0 0 10px #ff90c866;}
+  to{box-shadow:0 4px 0 #c060a0,0 0 28px #ff90c8bb,0 0 50px #c080ffaa;}
+}
+
+/* ── OVERLAY ── */
+#overlay{
+  position:absolute;top:0;left:0;right:0;bottom:0;
+  background:linear-gradient(160deg,rgba(255,220,245,0.97) 0%,rgba(220,190,255,0.97) 50%,rgba(185,215,255,0.97) 100%);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  border-radius:22px;
+}
+.o-deco{font-size:28px;margin-bottom:6px;animation:floatDeco 2s ease-in-out infinite alternate;}
+@keyframes floatDeco{from{transform:translateY(0);}to{transform:translateY(-6px);}}
+.o-title{
+  font-size:28px;font-weight:900;letter-spacing:4px;
+  background:linear-gradient(90deg,#ff80c0,#c060e0,#80b8ff);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  margin-bottom:2px;
+}
+.o-sub{font-size:10px;color:#d090c0;letter-spacing:4px;margin-bottom:24px;}
+.rankBox{
+  background:rgba(255,255,255,0.7);
+  border:2px solid #ffb8d8;border-radius:18px;
+  padding:14px 24px;margin-bottom:18px;width:260px;
+  box-shadow:0 4px 16px #ffb8d844;
+}
+.rankTitle{font-size:10px;color:#d080a0;letter-spacing:3px;margin-bottom:10px;text-align:center;}
+.rankRow{font-size:13px;color:#9060c0;margin:6px 0;display:flex;justify-content:space-between;align-items:center;}
+.rankRow .rk{font-size:16px;}
+.rankRow.top1 .rs{color:#ff60a0;font-weight:900;}
+.goScore{font-size:38px;font-weight:900;color:#c040a0;margin-bottom:4px;}
+.goLabel{font-size:10px;color:#d090b0;letter-spacing:4px;margin-bottom:20px;}
+.newBest{
+  font-size:13px;font-weight:900;color:#ff40a0;letter-spacing:2px;margin-bottom:8px;
+  animation:newBestAnim 0.5s ease-in-out infinite alternate;display:none;
+}
+@keyframes newBestAnim{from{transform:scale(1);}to{transform:scale(1.08);}}
+#startBtn{
+  background:linear-gradient(135deg,#ff90c8,#c080ff,#80c8ff);
+  border:none;border-radius:24px;
+  color:#fff;font-family:'Zen Maru Gothic',sans-serif;
+  font-size:15px;font-weight:900;
+  padding:15px 52px;cursor:pointer;letter-spacing:4px;
+  box-shadow:0 5px 0 #c060a0,0 0 24px #ff90c866;
+  transition:all 0.1s;
+}
+#startBtn:hover{transform:translateY(-2px);box-shadow:0 7px 0 #c060a0,0 0 32px #ff90c888;}
+#startBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #c060a0;}
+.howto{font-size:9px;color:#c090b0;letter-spacing:2px;margin-top:14px;text-align:center;line-height:2;}
+</style>
+</head>
+<body>
+<div id="gw">
+  <canvas id="gameCanvas" width="420" height="620"></canvas>
+  <div id="ui">
+    <div class="ui-box">
+      <div class="ui-label">✦ SCORE ✦</div>
+      <div class="ui-val" id="scoreVal">000000</div>
+      <div id="bestMark">★ NEW BEST!</div>
+    </div>
+    <div class="ui-box">
+      <div class="ui-label">🏆 BEST</div>
+      <div class="ui-val" id="bestVal">000000</div>
+    </div>
+    <div class="ui-box">
+      <div class="ui-label">⚡ LEVEL</div>
+      <div class="ui-val" id="diffVal">1</div>
+    </div>
+  </div>
+  <div id="skillBar">
+    <div id="skillLabel">✨ MAGIC GAUGE ✨</div>
+    <div id="skillTrack"><div id="skillFill"></div></div>
+  </div>
+  <div id="btnArea">
+    <button class="ctrl-btn" id="upBtn">▲</button>
+    <button id="skillBtn">✨ MAGIC</button>
+    <button class="ctrl-btn" id="downBtn">▼</button>
+  </div>
+  <div id="overlay">
+    <div class="o-deco">🍬🌙🍭</div>
+    <div class="o-title">DREAM RUSH</div>
+    <div class="o-sub">♡ お菓子の国を走れ ♡</div>
+    <div class="rankBox">
+      <div class="rankTitle">♡ HALL OF FAME ♡</div>
+      <div class="rankRow top1"><span class="rk">🥇</span><span class="rs" id="rv1">------</span></div>
+      <div class="rankRow"><span class="rk">🥈</span><span class="rs" id="rv2">------</span></div>
+      <div class="rankRow"><span class="rk">🥉</span><span class="rs" id="rv3">------</span></div>
+    </div>
+    <div class="goScore" id="goScore" style="display:none"></div>
+    <div class="newBest" id="newBest">⭐ NEW RECORD! ⭐</div>
+    <div class="goLabel" id="goLabel" style="display:none"></div>
+    <button id="startBtn">♡ はじめる ♡</button>
+    <div class="howto">▲▼ で上下移動 ／ MAGIC でスキル発動<br>お菓子を集めてゲージをためよう！</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+//  SETUP
+// ============================================================
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+ctx.imageSmoothingEnabled = false;
+const W = 420, H = 620;
+const GROUND_Y = H - 64;  // 走路の下端
+const CEIL_Y   = 48;       // 走路の上端
+const LANE_H   = GROUND_Y - CEIL_Y; // 走路高さ
+const CHAR_W   = 26, CHAR_H = 44;
+const PLAYER_X = 90;
+const S = 3; // pixel scale
+
+// ============================================================
+//  PIXEL SPRITES  (14w x 16h, scale=S→42x48px)
+//  色インデックス:
+//  0=透明 1=肌 2=青髪 3=髪影 4=目(赤紫) 5=ほほ 6=服(濃紺)
+//  7=服ハイライト 8=スカート(グレー) 9=靴 A=白 B=髪ハイライト
+//  C=リボン(赤) D=肌影 E=スカート影 F=目白
+// ============================================================
+const PAL = {
+  0:null,'1':'#ffddc0','2':'#5ab8d0','3':'#2a7890',
+  '4':'#c03060','5':'#ffb0b0','6':'#2a3050','7':'#4a50a0',
+  '8':'#606880','9':'#202030','A':'#ffffff','B':'#90e0f0',
+  'C':'#ff4060','D':'#e0a888','E':'#484f60','F':'#f0e0f8'
+};
+
+// 走りframe0
+const SP_RUN0=[
+  [0,0,0,'C','C','C',0,0,0,0,0,0,0,0],
+  [0,0,'3','3','2','2','2',0,0,0,0,0,0,0],
+  [0,'3','3','2','2','2','2','3','3',0,0,0,0,0],
+  [0,'3','2','B','2','2','2','2','3',0,0,0,0,0],
+  [0,'3','2','2','2','2','2','2','3',0,0,0,0,0],
+  [0,0,'2','1','A','4','F','4','2',0,0,0,0,0],
+  [0,0,'2','1','5','1','5','1','2',0,0,0,0,0],
+  [0,0,'2','1','1','1','1','1','2',0,0,0,0,0],
+  [0,0,0,'6','6','6','6','7',0,0,0,0,0,0],
+  [0,'7','6','6','6','6','6','6','7',0,0,0,0,0],
+  [0,'1','7','6','6','6','7','1',0,0,0,0,0,0],
+  [0,0,'8','8','8','8','8',0,0,0,0,0,0,0],
+  [0,0,'8','E','8','8','E',0,0,0,0,0,0,0],
+  [0,0,0,'9','9',0,'9','9',0,0,0,0,0,0],
+  [0,0,0,'9','9',0,'9','9',0,0,0,0,0,0],
+  [0,0,'9','9',0,0,0,'9',0,0,0,0,0,0],
+];
+// 走りframe1
+const SP_RUN1=[
+  [0,0,0,'C','C','C',0,0,0,0,0,0,0,0],
+  [0,0,'3','3','2','2','2',0,0,0,0,0,0,0],
+  [0,'3','3','2','2','2','2','3','3',0,0,0,0,0],
+  [0,'3','2','B','2','2','2','2','3',0,0,0,0,0],
+  [0,'3','2','2','2','2','2','2','3',0,0,0,0,0],
+  [0,0,'2','1','A','4','F','4','2',0,0,0,0,0],
+  [0,0,'2','1','5','1','5','1','2',0,0,0,0,0],
+  [0,0,'2','1','1','1','1','1','2',0,0,0,0,0],
+  [0,0,0,'6','6','6','6','7',0,0,0,0,0,0],
+  [0,'7','6','6','6','6','6','6','7',0,0,0,0,0],
+  [0,'1','7','6','6','6','7','1',0,0,0,0,0,0],
+  [0,0,'8','8','8','8','8',0,0,0,0,0,0,0],
+  [0,0,'8','E','8','8','E',0,0,0,0,0,0,0],
+  [0,0,'9','9',0,0,0,'9','9',0,0,0,0,0],
+  [0,'9','9',0,0,0,0,0,'9','9',0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+// ジャンプ（スキル）ポーズ
+const SP_SKILL=[
+  [0,0,0,'C','C','C',0,0,0,0,0,0,0,0],
+  [0,0,'3','3','2','2','2','3',0,0,0,0,0,0],
+  [0,'3','2','2','2','2','2','2','3',0,0,0,0,0],
+  [0,'3','2','B','2','2','2','2','3',0,0,0,0,0],
+  [0,0,'2','1','A','4','F','4','2',0,0,0,0,0],
+  [0,0,'2','1','A','4','A','1','2',0,0,0,0,0],// 星目
+  [0,0,'2','1','5','1','5','1','2',0,0,0,0,0],
+  [0,0,'2','1','1','1','1','1','2',0,0,0,0,0],
+  ['7','7','6','6','6','6','7','7','7',0,0,0,0,0],// 腕広げる
+  [0,0,'6','6','6','6','6','6',0,0,0,0,0,0],
+  [0,0,0,'6','6','6','6',0,0,0,0,0,0,0],
+  [0,0,'8','8','8','8','8',0,0,0,0,0,0,0],
+  [0,'8','8','E','8','E','8','8',0,0,0,0,0,0],
+  [0,0,0,'9','9','9','9',0,0,0,0,0,0,0],
+  [0,0,'9','9',0,0,'9','9',0,0,0,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+];
+
+const SPRITES=[SP_RUN0,SP_RUN1,SP_RUN0,SP_RUN1];
+
+function drawSprite(sp,cx,cy){
+  sp.forEach((row,ry)=>row.forEach((c,rx)=>{
+    if(!c||c===0)return;
+    const col=PAL[c];if(!col)return;
+    ctx.fillStyle=col;
+    ctx.fillRect(cx+rx*S,cy+ry*S,S,S);
+  }));
+}
+
+// ============================================================
+//  GAME STATE
+// ============================================================
+let gameState='title';
+let score=0,bestScore=0,frameCount=0,scrollSpeed=0;
+let enemies=[],candies=[],particles=[],floats=[],bgObjs=[];
+let cameraX=0,nextEnemyX=0,nextCandyX=0;
+let skillGauge=0; // 0~100
+let skillActive=false,skillTimer=0;
+const SKILL_DURATION=180;
+let isNewBest=false;
+let newBestFxTimer=0;
+let keys={up:false,down:false};
+
+let player={
+  x:PLAYER_X, y:0,
+  vy:0,
+  targetY:0,
+  animFrame:0,
+  invincible:0,
+  skillPose:false,
+};
+
+// ============================================================
+//  SAVE / LOAD
+// ============================================================
+function loadData(){
+  try{
+    const d=JSON.parse(localStorage.getItem('dreamrun2')||'{}');
+    bestScore=d.best||0;
+    document.getElementById('bestVal').textContent=String(bestScore).padStart(6,'0');
+    updateRankUI(d.ranks||[]);
+  }catch(e){}
+}
+function saveData(final){
+  try{
+    const d=JSON.parse(localStorage.getItem('dreamrun2')||'{}');
+    const ranks=d.ranks||[];
+    ranks.push(final);ranks.sort((a,b)=>b-a);
+    const top3=ranks.slice(0,3);
+    if(final>=(d.best||0))d.best=final;
+    d.ranks=top3;
+    localStorage.setItem('dreamrun2',JSON.stringify(d));
+    updateRankUI(top3);
+    document.getElementById('bestVal').textContent=String(d.best).padStart(6,'0');
+  }catch(e){}
+}
+function updateRankUI(r){
+  ['rv1','rv2','rv3'].forEach((id,i)=>{
+    document.getElementById(id).textContent=r[i]!==undefined?String(r[i]).padStart(6,'0'):'------';
+  });
+}
+loadData();
+
+// ============================================================
+//  DIFFICULTY
+// ============================================================
+function getDiff(){
+  const s=Math.floor(score);
+  const lv=Math.min(10,1+Math.floor(s/100));
+  const spd=2.4+lv*0.2;
+  const enemyInterval=Math.max(140,280-lv*14);
+  const candyInterval=Math.max(80,160-lv*8);
+  // 敵の動きパターン: lv4以上でウェービング
+  const waving=lv>=4;
+  const wavingFast=lv>=7;
+  return{lv,spd,enemyInterval,candyInterval,waving,wavingFast};
+}
+
+// ============================================================
+//  BACKGROUND
+// ============================================================
+// パステル背景オブジェクト（雲、星、ハート）
+const BG_ITEMS=['☁','★','♡','🌸','✦'];
+for(let i=0;i<20;i++){
+  bgObjs.push({
+    x:Math.random()*W*3,
+    y:CEIL_Y+Math.random()*LANE_H,
+    icon:BG_ITEMS[Math.floor(Math.random()*BG_ITEMS.length)],
+    speed:0.15+Math.random()*0.3,
+    size:10+Math.random()*18,
+    alpha:0.15+Math.random()*0.25,
+  });
+}
+// カラフルな雲
+const BG_CLOUDS=[];
+for(let i=0;i<8;i++){
+  BG_CLOUDS.push({
+    x:Math.random()*W*2,
+    y:CEIL_Y+Math.random()*LANE_H*0.6,
+    w:60+Math.random()*80,h:24+Math.random()*20,
+    speed:0.1+Math.random()*0.15,
+    color:['#ffd8f0','#e8d0ff','#d0e8ff','#ffe8d0','#d0ffd8'][i%5],
+    alpha:0.3+Math.random()*0.3,
+  });
+}
+// 床のキャンディストライプ
+let stripeOffset=0;
+
+function drawBackground(){
+  // グラデーション空
+  const grad=ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0,'#ffe8f8');
+  grad.addColorStop(0.5,'#ead8ff');
+  grad.addColorStop(1,'#c8e8ff');
+  ctx.fillStyle=grad;
+  ctx.fillRect(0,0,W,H);
+
+  // 雲
+  BG_CLOUDS.forEach(c=>{
+    c.x-=c.speed;if(c.x+c.w<0)c.x=W+c.w;
+    ctx.globalAlpha=c.alpha;
+    ctx.fillStyle=c.color;
+    // 丸い雲
+    ctx.beginPath();
+    ctx.ellipse(c.x+c.w*0.3,c.y+c.h*0.6,c.w*0.3,c.h*0.45,0,0,Math.PI*2);
+    ctx.ellipse(c.x+c.w*0.6,c.y+c.h*0.5,c.w*0.35,c.h*0.55,0,0,Math.PI*2);
+    ctx.ellipse(c.x+c.w*0.85,c.y+c.h*0.65,c.w*0.22,c.h*0.4,0,0,Math.PI*2);
+    ctx.fill();
+    ctx.globalAlpha=1;
+  });
+
+  // 背景アイコン
+  bgObjs.forEach(b=>{
+    b.x-=b.speed;if(b.x<-30)b.x=W+30;
+    ctx.globalAlpha=b.alpha;
+    ctx.font=`${b.size}px serif`;
+    ctx.fillText(b.icon,b.x,b.y);
+    ctx.globalAlpha=1;
+  });
+
+  // 走路上限線
+  ctx.fillStyle='rgba(255,180,220,0.4)';
+  ctx.fillRect(0,CEIL_Y-2,W,2);
+
+  // 地面：キャンディストライプ
+  stripeOffset=(stripeOffset+scrollSpeed*0.5)%40;
+  ctx.save();
+  ctx.beginPath();ctx.rect(0,GROUND_Y,W,H-GROUND_Y);ctx.clip();
+  for(let x=-40+stripeOffset;x<W+40;x+=40){
+    const grad2=ctx.createLinearGradient(x,0,x+20,0);
+    grad2.addColorStop(0,'#ffb8d8');grad2.addColorStop(1,'#ffd8b0');
+    ctx.fillStyle=grad2;ctx.globalAlpha=0.5;
+    ctx.fillRect(x,GROUND_Y,20,H-GROUND_Y);
+  }
+  ctx.globalAlpha=1;ctx.restore();
+
+  // 地面上ライン
+  ctx.fillStyle='rgba(255,255,255,0.8)';ctx.fillRect(0,GROUND_Y,W,3);
+  ctx.fillStyle='#ffb8d8';ctx.fillRect(0,GROUND_Y+3,W,2);
+
+  // 上部装飾
+  ctx.fillStyle='rgba(255,255,255,0.6)';ctx.fillRect(0,CEIL_Y,W,3);
+  ctx.fillStyle='#b8d8ff';ctx.fillRect(0,CEIL_Y+3,W,2);
+}
+
+// ============================================================
+//  ENEMIES（障害物）
+// ============================================================
+// 敵の種類: いちご, ばけもの, トゲ, ケーキ怪物
+const ENEMY_TYPES=[
+  {name:'strawberry',w:32,h:32,color:'#ff6080',face:'🍓',speed:0,wave:false},
+  {name:'ghost',w:30,h:36,color:'#c8a0ff',face:'👻',speed:0,wave:true},
+  {name:'spike',w:28,h:40,color:'#ff90a0',face:'🌵',speed:0,wave:false},
+  {name:'bat',w:34,h:28,color:'#a080d0',face:'🦇',speed:0,wave:true},
+];
+
+function spawnEnemy(){
+  const diff=getDiff();
+  const type=ENEMY_TYPES[Math.floor(Math.random()*ENEMY_TYPES.length)];
+  const margin=40;
+  const ey=CEIL_Y+margin+Math.random()*(LANE_H-type.h-margin*2);
+  enemies.push({
+    worldX:cameraX+W+20,
+    y:ey, baseY:ey,
+    w:type.w,h:type.h,
+    color:type.color,face:type.face,
+    wave:diff.waving&&type.wave,
+    waveFast:diff.wavingFast,
+    wavePhase:Math.random()*Math.PI*2,
+    speed:type.speed,
+    dead:false,deadTimer:0,
+  });
+}
+
+function drawEnemy(e){
+  const sx=e.worldX-cameraX;
+  if(sx+e.w<-10||sx>W+10)return;
+  if(e.dead){
+    // 死亡エフェクト
+    ctx.globalAlpha=e.deadTimer/30;
+    ctx.font=`${e.w+8}px serif`;
+    ctx.fillText(e.face,sx-4,e.y+e.h);
+    // ハートが散る
+    ctx.font='12px serif';
+    const t=1-e.deadTimer/30;
+    for(let i=0;i<4;i++){
+      const a=i/4*Math.PI*2;
+      ctx.fillText('💖',sx+e.w/2+Math.cos(a)*t*24,e.y+e.h/2+Math.sin(a)*t*24);
+    }
+    ctx.globalAlpha=1;
+    return;
+  }
+  // 通常描画
+  // 影
+  ctx.fillStyle='rgba(200,150,200,0.2)';
+  ctx.beginPath();ctx.ellipse(sx+e.w/2,GROUND_Y+4,e.w*0.4,5,0,0,Math.PI*2);ctx.fill();
+  // 本体（丸め）
+  const r=Math.min(e.w,e.h)*0.35;
+  ctx.fillStyle=e.color;
+  ctx.beginPath();
+  ctx.roundRect(sx,e.y,e.w,e.h,r);
+  ctx.fill();
+  // ハイライト
+  ctx.fillStyle='rgba(255,255,255,0.35)';
+  ctx.beginPath();ctx.ellipse(sx+e.w*0.3,e.y+e.h*0.25,e.w*0.2,e.h*0.12,0,0,Math.PI*2);ctx.fill();
+  // 顔
+  ctx.font=`${Math.min(e.w,e.h)*0.8}px serif`;
+  ctx.fillText(e.face,sx+2,e.y+e.h*0.85);
+}
+
+// ============================================================
+//  CANDIES（お菓子アイテム）
+// ============================================================
+const CANDY_FACES=['🍬','🍭','🍩','⭐','💎','🌟','🎀','🍰'];
+function spawnCandy(){
+  const margin=20;
+  const cy=CEIL_Y+margin+Math.random()*(LANE_H-24-margin);
+  candies.push({
+    worldX:cameraX+W+20,
+    y:cy,
+    face:CANDY_FACES[Math.floor(Math.random()*CANDY_FACES.length)],
+    r:12,
+    collected:false,
+    bobPhase:Math.random()*Math.PI*2,
+    special:Math.random()<0.1, // レアキャンディ
+  });
+}
+function drawCandy(c){
+  const sx=c.worldX-cameraX;
+  if(sx<-20||sx>W+20)return;
+  const bob=Math.sin(frameCount*0.05+c.bobPhase)*4;
+  const size=c.special?22:16;
+  // グロウ
+  if(c.special){
+    ctx.fillStyle='rgba(255,200,100,0.25)';
+    ctx.beginPath();ctx.arc(sx+c.r,c.y+c.r+bob,c.r*2,0,Math.PI*2);ctx.fill();
+  }
+  ctx.font=`${size}px serif`;
+  ctx.fillText(c.face,sx,c.y+c.r+bob+size*0.35);
+}
+
+// ============================================================
+//  PARTICLES
+// ============================================================
+function spawnParticles(sx,sy,type){
+  const n=type==='candy'?12:type==='skill'?20:8;
+  const colors=type==='candy'
+    ?['#ff90c8','#ffd84a','#c080ff','#80d8ff','#ff80a0']
+    :type==='skill'
+    ?['#ff60b0','#c060ff','#60c0ff','#fff','#ffd84a']
+    :['#ff8080','#ffc0c0','#fff'];
+  for(let i=0;i<n;i++){
+    const a=(Math.PI*2*i/n)+Math.random()*0.5;
+    const spd=type==='skill'?3+Math.random()*4:1.5+Math.random()*3;
+    particles.push({
+      x:sx,y:sy,
+      vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-1.5,
+      life:20+Math.random()*30,maxLife:50,
+      color:colors[Math.floor(Math.random()*colors.length)],
+      size:type==='skill'?4+Math.random()*4:2+Math.random()*3,
+      icon:type==='candy'?['✦','★','♡'][Math.floor(Math.random()*3)]:null,
+    });
+  }
+}
+
+function drawParticles(){
+  particles.forEach(p=>{
+    const a=p.life/p.maxLife;
+    ctx.globalAlpha=a*0.9;
+    if(p.icon){
+      ctx.fillStyle=p.color;
+      ctx.font=`${p.size*2}px serif`;
+      ctx.fillText(p.icon,p.x,p.y);
+    } else {
+      ctx.fillStyle=p.color;
+      ctx.beginPath();ctx.arc(p.x,p.y,p.size*a,0,Math.PI*2);ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  });
+}
+
+function spawnFloat(sx,sy,text,color){
+  floats.push({x:sx,y:sy,text,color:color||'#ff80c0',life:50,maxLife:50});
+}
+
+function drawFloats(){
+  floats.forEach(t=>{
+    const a=t.life/t.maxLife;
+    ctx.globalAlpha=a;
+    ctx.fillStyle=t.color;
+    ctx.font='bold 14px "Zen Maru Gothic",sans-serif';
+    ctx.fillText(t.text,t.x,t.y);
+    ctx.globalAlpha=1;
+  });
+}
+
+// ============================================================
+//  SKILL EFFECT
+// ============================================================
+let skillWave=0;
+function drawSkillEffect(){
+  if(!skillActive)return;
+  const t=skillTimer/SKILL_DURATION;
+  // 画面全体に魔法オーラ
+  ctx.fillStyle=`rgba(200,120,255,${0.08*(1+Math.sin(frameCount*0.2))})`;
+  ctx.fillRect(0,0,W,H);
+  // キャラ周辺にスパークル
+  if(frameCount%4===0){
+    const sx=player.x;
+    const sy=player.y-CHAR_H/2;
+    for(let i=0;i<3;i++){
+      particles.push({
+        x:sx+(Math.random()-0.5)*60,y:sy+(Math.random()-0.5)*60,
+        vx:(Math.random()-0.5)*2,vy:-1-Math.random()*2,
+        life:15+Math.random()*15,maxLife:30,
+        color:['#ffd84a','#ff90c8','#a0f0ff','#fff'][Math.floor(Math.random()*4)],
+        size:3+Math.random()*3,icon:null,
+      });
+    }
+  }
+  // スキルタイマーリング
+  ctx.strokeStyle=`rgba(200,100,255,${0.6*t})`;
+  ctx.lineWidth=3;
+  ctx.beginPath();
+  ctx.arc(player.x,player.y-CHAR_H/2,32+Math.sin(frameCount*0.15)*4,0,Math.PI*2*t);
+  ctx.stroke();
+}
+
+// ============================================================
+//  NEW BEST EFFECT
+// ============================================================
+function drawNewBestFx(){
+  if(newBestFxTimer<=0)return;
+  const t=newBestFxTimer/120;
+  // レインボーフラッシュ
+  ctx.fillStyle=`rgba(255,200,240,${0.15*t*(1+Math.sin(frameCount*0.3))})`;
+  ctx.fillRect(0,0,W,H);
+  // 上から落ちてくる星
+  if(frameCount%3===0){
+    particles.push({
+      x:Math.random()*W,y:0,
+      vx:(Math.random()-0.5)*1,vy:2+Math.random()*3,
+      life:50+Math.random()*40,maxLife:90,
+      color:['#ffd84a','#ff90c8','#c0a0ff','#80e0ff'][Math.floor(Math.random()*4)],
+      size:3+Math.random()*4,icon:null,
+    });
+  }
+  // "NEW RECORD!" テキスト
+  const pulse=1+Math.sin(frameCount*0.2)*0.05;
+  ctx.save();ctx.translate(W/2,CEIL_Y+30);ctx.scale(pulse,pulse);
+  ctx.fillStyle='rgba(255,100,180,'+t+')';
+  ctx.font='bold 20px "Zen Maru Gothic",sans-serif';
+  ctx.textAlign='center';ctx.fillText('⭐ NEW RECORD! ⭐',0,0);
+  ctx.restore();ctx.textAlign='left';
+}
+
+// ============================================================
+//  COLLISION
+// ============================================================
+function getPlayerBox(){
+  return{x:player.x-CHAR_W/2+4,y:player.y-CHAR_H+4,w:CHAR_W-8,h:CHAR_H-8};
+}
+function rectsOverlap(ax,ay,aw,ah,bx,by,bw,bh){
+  return!(ax+aw<=bx||ax>=bx+bw||ay+ah<=by||ay>=by+bh);
+}
+
+// ============================================================
+//  MAIN LOOP
+// ============================================================
+function gameLoop(){
+  if(gameState!=='playing')return;
+  frameCount++;
+  const diff=getDiff();
+  scrollSpeed=diff.spd;
+
+  // ── スポーン ──
+  if(cameraX+W+20>=nextEnemyX){spawnEnemy();nextEnemyX=cameraX+W+20+diff.enemyInterval;}
+  if(cameraX+W+20>=nextCandyX){spawnCandy();nextCandyX=cameraX+W+20+diff.candyInterval;}
+
+  // ── プレイヤー移動（上下） ──
+  const moveSpd=5.5;
+  if(keys.up)  player.vy=Math.max(-moveSpd,player.vy-1.2);
+  else if(keys.down) player.vy=Math.min(moveSpd,player.vy+1.2);
+  else player.vy*=0.8;
+  player.y=Math.max(CEIL_Y+CHAR_H,Math.min(GROUND_Y,player.y+player.vy));
+
+  if(player.invincible>0)player.invincible--;
+
+  // ── スキル ──
+  if(skillActive){
+    skillTimer--;
+    if(skillTimer<=0){skillActive=false;player.skillPose=false;}
+  }
+
+  // ── スクロール ──
+  cameraX+=scrollSpeed;
+  player.x=PLAYER_X;// 常に固定X
+
+  // ── 敵の更新 ──
+  enemies.forEach(e=>{
+    if(e.dead){e.deadTimer--;return;}
+    e.worldX-=0;// worldXはcameraXで相対表示
+    if(e.wave){
+      const freq=e.waveFast?0.05:0.03;
+      e.y=e.baseY+Math.sin(frameCount*freq+e.wavePhase)*45;
+      // 走路内に収める
+      e.y=Math.max(CEIL_Y+2,Math.min(GROUND_Y-e.h-2,e.y));
+    }
+    const sx=e.worldX-cameraX;
+    const pb=getPlayerBox();
+    // 当たり判定
+    if(player.invincible===0&&!skillActive&&rectsOverlap(pb.x,pb.y,pb.w,pb.h,sx,e.y,e.w,e.h)){
+      endGame();return;
+    }
+    // スキルで倒す
+    if(skillActive&&rectsOverlap(pb.x-30,pb.y-30,pb.w+60,pb.h+60,sx,e.y,e.w,e.h)){
+      if(!e.dead){
+        e.dead=true;e.deadTimer=30;
+        score+=50;
+        spawnParticles(sx+e.w/2,e.y+e.h/2,'skill');
+        spawnFloat(sx,e.y-10,'✨+50','#ffd84a');
+      }
+    }
+  });
+  enemies=enemies.filter(e=>!(e.dead&&e.deadTimer<=0)&&(e.worldX-cameraX)>-60);
+
+  // ── キャンディ当たり判定 ──
+  const pb=getPlayerBox();
+  candies.forEach(c=>{
+    if(c.collected)return;
+    const sx=c.worldX-cameraX;
+    if(rectsOverlap(pb.x,pb.y,pb.w,pb.h,sx-c.r,c.y-c.r,c.r*2,c.r*2)){
+      c.collected=true;
+      const pts=c.special?30:10;
+      score+=pts;
+      skillGauge=Math.min(100,skillGauge+(c.special?25:8));
+      document.getElementById('skillFill').style.width=skillGauge+'%';
+      if(skillGauge>=100){
+        document.getElementById('skillBtn').classList.add('ready');
+      }
+      spawnParticles(sx,c.y,'candy');
+      spawnFloat(sx,c.y-10,(c.special?'⭐':'✦')+'+'+pts,c.special?'#ffd84a':'#ff90c0');
+    }
+  });
+  candies=candies.filter(c=>!c.collected&&(c.worldX-cameraX)>-40);
+
+  // ── スコア ──
+  score+=0.04;
+  const sc=Math.floor(score);
+  document.getElementById('scoreVal').textContent=String(sc).padStart(6,'0');
+  document.getElementById('diffVal').textContent=diff.lv;
+
+  // ── NEW BEST判定 ──
+  if(sc>bestScore&&!isNewBest){
+    isNewBest=true;newBestFxTimer=120;
+    document.getElementById('bestMark').style.display='block';
+    document.getElementById('bestVal').textContent=String(sc).padStart(6,'0');
+  }
+  if(newBestFxTimer>0)newBestFxTimer--;
+
+  // ── パーティクル更新 ──
+  particles.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.vy+=0.06;p.life--;});
+  particles=particles.filter(p=>p.life>0);
+  floats.forEach(t=>{t.y-=0.8;t.life--;});
+  floats=floats.filter(t=>t.life>0);
+
+  // ══════════════════════ DRAW ══════════════════════
+  drawBackground();
+  enemies.forEach(drawEnemy);
+  candies.forEach(drawCandy);
+  drawParticles();
+  drawSkillEffect();
+
+  // キャラ描画
+  const spriteIdx=player.skillPose?2:Math.floor(frameCount/7)%4;
+  const sprite=player.skillPose?SP_SKILL:SPRITES[spriteIdx];
+  const drawX=player.x-CHAR_W/2-6;
+  const drawY=player.y-CHAR_H-4;
+
+  // 点滅（無敵中）
+  if(player.invincible===0||Math.floor(frameCount/4)%2===0){
+    // 影
+    ctx.fillStyle='rgba(200,150,220,0.18)';
+    ctx.beginPath();ctx.ellipse(player.x,GROUND_Y+4,16,5,0,0,Math.PI*2);ctx.fill();
+    drawSprite(sprite,drawX,drawY);
+  }
+
+  drawFloats();
+  drawNewBestFx();
+
+  // スキルアクティブ中の残り時間表示
+  if(skillActive){
+    const t=skillTimer/SKILL_DURATION;
+    ctx.fillStyle='rgba(200,100,255,0.5)';
+    ctx.fillRect(0,CEIL_Y-6,W*t,4);
+  }
+
+  // スキャンラインをごく薄く
+  ctx.fillStyle='rgba(240,210,240,0.04)';
+  for(let y=0;y<H;y+=3)ctx.fillRect(0,y,W,1);
+
+  requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  SKILL ACTIVATION
+// ============================================================
+function activateSkill(){
+  if(gameState!=='playing')return;
+  if(skillGauge<100)return;
+  skillActive=true;skillTimer=SKILL_DURATION;
+  skillGauge=0;
+  document.getElementById('skillFill').style.width='0%';
+  document.getElementById('skillBtn').classList.remove('ready');
+  player.skillPose=true;
+  // 大爆発エフェクト
+  spawnParticles(player.x,player.y-CHAR_H/2,'skill');
+  spawnFloat(player.x-20,player.y-CHAR_H-20,'✨ MAGIC! ✨','#ff60b0');
+  // 即座に敵をワイプ
+  enemies.forEach(e=>{
+    const sx=e.worldX-cameraX;
+    if(sx>-20&&sx<W+20&&!e.dead){
+      e.dead=true;e.deadTimer=30;
+      score+=30;
+      spawnParticles(sx+e.w/2,e.y+e.h/2,'skill');
+    }
+  });
+}
+
+// ============================================================
+//  START / END
+// ============================================================
+function startGame(){
+  score=0;frameCount=0;
+  enemies=[];candies=[];particles=[];floats=[];
+  cameraX=0;
+  skillGauge=0;skillActive=false;skillTimer=0;
+  isNewBest=false;newBestFxTimer=0;
+  document.getElementById('skillFill').style.width='0%';
+  document.getElementById('skillBtn').classList.remove('ready');
+  document.getElementById('bestMark').style.display='none';
+  player={x:PLAYER_X,y:CEIL_Y+LANE_H/2+CHAR_H,vy:0,animFrame:0,invincible:60,skillPose:false};
+  nextEnemyX=cameraX+W+200;
+  nextCandyX=cameraX+W+80;
+  document.getElementById('scoreVal').textContent='000000';
+  document.getElementById('diffVal').textContent='1';
+  document.getElementById('overlay').style.display='none';
+  document.getElementById('goScore').style.display='none';
+  document.getElementById('goLabel').style.display='none';
+  document.getElementById('newBest').style.display='none';
+  gameState='playing';
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame(){
+  gameState='gameover';
+  const final=Math.floor(score);
+  saveData(final);
+  document.getElementById('goScore').textContent=String(final).padStart(6,'0');
+  document.getElementById('goScore').style.display='block';
+  document.getElementById('goLabel').textContent='♡ GAME OVER ♡';
+  document.getElementById('goLabel').style.display='block';
+  if(isNewBest){document.getElementById('newBest').style.display='block';}
+  document.getElementById('startBtn').textContent='♡ もういちど ♡';
+  document.getElementById('overlay').style.display='flex';
+}
+
+// ============================================================
+//  INPUT
+// ============================================================
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('skillBtn').addEventListener('click',activateSkill);
+document.getElementById('skillBtn').addEventListener('touchstart',e=>{e.preventDefault();activateSkill();},{passive:false});
+
+const upBtn=document.getElementById('upBtn');
+const dnBtn=document.getElementById('downBtn');
+function setKey(k,v){keys[k]=v;}
+upBtn.addEventListener('mousedown',()=>setKey('up',true));
+upBtn.addEventListener('mouseup',()=>setKey('up',false));
+upBtn.addEventListener('touchstart',e=>{e.preventDefault();setKey('up',true);},{passive:false});
+upBtn.addEventListener('touchend',e=>{e.preventDefault();setKey('up',false);},{passive:false});
+dnBtn.addEventListener('mousedown',()=>setKey('down',true));
+dnBtn.addEventListener('mouseup',()=>setKey('down',false));
+dnBtn.addEventListener('touchstart',e=>{e.preventDefault();setKey('down',true);},{passive:false});
+dnBtn.addEventListener('touchend',e=>{e.preventDefault();setKey('down',false);},{passive:false});
+
+document.addEventListener('keydown',e=>{
+  if(e.code==='ArrowUp'||e.code==='KeyW'){e.preventDefault();setKey('up',true);}
+  if(e.code==='ArrowDown'||e.code==='KeyS'){e.preventDefault();setKey('down',true);}
+  if(e.code==='Space'){e.preventDefault();activateSkill();}
+});
+document.addEventListener('keyup',e=>{
+  if(e.code==='ArrowUp'||e.code==='KeyW')setKey('up',false);
+  if(e.code==='ArrowDown'||e.code==='KeyS')setKey('down',false);
+});
+
+// ============================================================
+//  INIT DRAW
+// ============================================================
+(function initDraw(){
+  drawBackground();
+  const midY=CEIL_Y+LANE_H/2+CHAR_H;
+  drawSprite(SP_RUN0,PLAYER_X-CHAR_W/2-6,midY-CHAR_H-4);
+})();
+</script>
+</body>
+</html>
